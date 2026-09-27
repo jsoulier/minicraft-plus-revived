@@ -12,6 +12,7 @@ run/
 
 # hidden files
 /.*
+!/.vscode/
 
 # Gradle
 .gradle/

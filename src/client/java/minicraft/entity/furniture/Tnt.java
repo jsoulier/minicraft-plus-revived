@@ -114,4 +114,9 @@ public class Tnt extends Furniture {
 
 		return false;
 	}
+
+	@Override
+	public int getGroundOffset() {
+		return 5;
+	}
 }

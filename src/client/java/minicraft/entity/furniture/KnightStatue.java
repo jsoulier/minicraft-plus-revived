@@ -54,5 +54,9 @@ public class KnightStatue extends Furniture {
 	public int getBossHealth() {
 		return bossHealth;
 	}
-}
 
+	@Override
+	public int getGroundOffset() {
+		return 8;
+	}
+}

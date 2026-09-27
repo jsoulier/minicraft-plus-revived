@@ -45,4 +45,9 @@ public class Lantern extends Furniture {
 	public int getLightRadius() {
 		return type.light;
 	}
+
+	@Override
+	public int getGroundOffset() {
+		return 6;
+	}
 }

@@ -218,6 +218,10 @@ public class Updater extends Game {
 					Renderer.showDebugInfo = !Renderer.showDebugInfo;
 				}
 
+				if (currentDisplay == null && input.inputPressed("minimap")) {
+					Renderer.showMinimap = !Renderer.showMinimap;
+				}
+
 				// For debugging only
 				{
 					// Quick Level change: move the player for -1, or 1 levels
@@ -238,10 +242,15 @@ public class Updater extends Game {
 					}
 
 					// Host-only cheats.
-					if (input.getMappedKey("F3-T-1").isClicked()) changeTimeOfDay(Time.Morning);
-					if (input.getMappedKey("F3-T-2").isClicked()) changeTimeOfDay(Time.Day);
-					if (input.getMappedKey("F3-T-3").isClicked()) changeTimeOfDay(Time.Evening);
-					if (input.getMappedKey("F3-T-4").isClicked()) changeTimeOfDay(Time.Night);
+					if (Renderer.showDebugInfo && currentDisplay == null) {
+						int step = dayLength / 256;
+						if (input.getMappedKey("9").isClicked()) {
+							setTime((tickCount + step) % dayLength);
+						}
+						if (input.getMappedKey("0").isClicked()) {
+							setTime((tickCount - step + dayLength) % dayLength);
+						}
+					}
 
 					String prevMode = (String) Settings.get("mode");
 					if (input.getMappedKey("F3-F4-2").isClicked()) {

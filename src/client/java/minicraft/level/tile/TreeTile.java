@@ -9,6 +9,7 @@ import minicraft.entity.mob.Player;
 import minicraft.entity.particle.SmashParticle;
 import minicraft.entity.particle.TextParticle;
 import minicraft.gfx.Color;
+import minicraft.gfx.Context;
 import minicraft.gfx.Screen;
 import minicraft.gfx.Sprite;
 import minicraft.gfx.SpriteLinker.LinkedSprite;
@@ -67,6 +68,12 @@ public class TreeTile extends Tile {
 	@SuppressWarnings("PointlessArithmeticExpression")
 	public void render(Screen screen, Level level, int x, int y) {
 		Tiles.get("Grass").render(screen, level, x, y);
+
+		if (screen.isFirstPerson()) {
+			screen.setSpriteMode(Context.SpriteMode.IMPOSTER, (x << 4) + 8, (y << 4) + 8, 8);
+			screen.render(x << 4, y << 4, level.getTreeType(x, y).treeSprite.getSprite());
+			return;
+		}
 
 		TreeType thisType = level.getTreeType(x, y);
 		// Checking whether the target direction has targeted the same TreeTile

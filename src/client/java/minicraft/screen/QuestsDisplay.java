@@ -329,7 +329,7 @@ public class QuestsDisplay extends Display {
 							int col = sheet.pixels[toffs + x + y * sheet.width]; // Gets the color of the current pixel from the value stored in the sheet.
 							boolean isTransparent = (col >> 24 == 0);
 							if (!isTransparent) {
-								if (whiteTint != -1 && col == 0x1FFFFFF) {
+								if (whiteTint != -1 && col == 0xFFFFFFFF) {
 									// If this is white, write the whiteTint over it
 									renderRasterPixel(x + xp, y + yp, whiteTint & 0xFFFFFF);
 								} else {
@@ -506,6 +506,7 @@ public class QuestsDisplay extends Display {
 					menu.render(screen);
 				Arrays.fill(rasterPixels, Color.BLACK);
 				renderRaster();
+				image.dirty = true;
 				// Border
 				screen.drawRect(rasterX - 1, rasterY - 1, rasterWidth + 2, rasterHeight + 2, Color.WHITE);
 				screen.render(rasterX, rasterY, 0, 0, rasterWidth, rasterHeight, image);

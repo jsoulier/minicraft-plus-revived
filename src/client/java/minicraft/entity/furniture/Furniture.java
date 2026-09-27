@@ -67,6 +67,11 @@ public class Furniture extends Entity {
 		else multiPushTime = 0;
 	}
 
+	@Override
+	public int getGroundOffset() {
+		return 7;
+	}
+
 	/**
 	 * Draws the furniture on the screen.
 	 */

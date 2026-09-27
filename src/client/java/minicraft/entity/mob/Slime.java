@@ -74,4 +74,9 @@ public class Slime extends EnemyMob {
 
 		super.die(); // Parent death call
 	}
+
+	@Override
+	public int getGroundOffset() {
+		return 3;
+	}
 }

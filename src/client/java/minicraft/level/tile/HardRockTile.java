@@ -9,6 +9,7 @@ import minicraft.entity.mob.Player;
 import minicraft.entity.particle.SmashParticle;
 import minicraft.entity.particle.TextParticle;
 import minicraft.gfx.Color;
+import minicraft.gfx.Context;
 import minicraft.gfx.Screen;
 import minicraft.gfx.SpriteAnimation;
 import minicraft.gfx.SpriteLinker.SpriteType;
@@ -81,7 +82,7 @@ public class HardRockTile extends Tile {
 	@Override
 	public void render(Screen screen, Level level, int x, int y) {
 		Tiles.get("dirt").render(screen, level, x, y);
-		super.render(screen, level, x, y);
+		sprite.render(screen, level, x, y, Context.SpriteMode.WALL);
 	}
 
 	public boolean tick(Level level, int xt, int yt) {

@@ -199,6 +199,18 @@ public class Color {
 		return (Math.max(Math.max(r, g), b) + Math.min(Math.min(r, g), b)) / 510f;
 	}
 
+	public static float red(int color) {
+		return ((color >> 16) & 0xFF) / 255f;
+	}
+
+	public static float green(int color) {
+		return ((color >> 8) & 0xFF) / 255f;
+	}
+
+	public static float blue(int color) {
+		return (color & 0xFF) / 255f;
+	}
+
 	/// This is for color testing.
 	public static void main(String[] args) {
 		int r, g, b;

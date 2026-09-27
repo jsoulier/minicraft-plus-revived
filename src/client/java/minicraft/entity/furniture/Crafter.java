@@ -64,4 +64,15 @@ public class Crafter extends Furniture {
 	public String toString() {
 		return (type.name().equalsIgnoreCase("DyeVat") ? "Dye Vat" : type.name()) + getDataPrints();
 	}
+
+	@Override
+	public int getGroundOffset() {
+		if (type == Type.Enchanter) {
+			return 8;
+		} else if (type == Type.Loom) {
+			return 6;
+		} else {
+			return 7;
+		}
+	}
 }

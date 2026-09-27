@@ -58,6 +58,7 @@ import minicraft.screen.SkinDisplay;
 import minicraft.screen.WorldSelectDisplay;
 import minicraft.util.AdvancementElement;
 import minicraft.util.Logging;
+import minicraft.util.MovementHandler;
 import minicraft.util.Vector2;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -75,6 +76,7 @@ public class Player extends Mob implements ItemHolder, ClientTickable {
 	public static final int MAX_MULTIPLIER = 50; // Maximum score multiplier.
 
 	public double moveSpeed = 1; // The number of coordinate squares to move; each tile is 16x16.
+	public final MovementHandler movement = new MovementHandler();
 	private int score; // The player's score
 
 	private int multipliertime = mtm; // Time left on the current multiplier.
@@ -474,10 +476,7 @@ public class Player extends Mob implements ItemHolder, ClientTickable {
 			// Move while we are not falling.
 			if (onFallDelay <= 0) {
 				// controlInput.buttonPressed is used because otherwise the player will move one even if held down.
-				if (input.inputDown("move-up")) vec.y--;
-				if (input.inputDown("move-down")) vec.y++;
-				if (input.inputDown("move-left")) vec.x--;
-				if (input.inputDown("move-right")) vec.x++;
+				vec = movement.update(input, getRide() == null);
 
 
 			}
@@ -492,8 +491,9 @@ public class Player extends Mob implements ItemHolder, ClientTickable {
 					}
 				} else {
 					double spd = moveSpeed * (potioneffects.containsKey(PotionType.Speed) ? 1.5D : 1);
-					int xd = (int) (vec.x * spd);
-					int yd = (int) (vec.y * spd);
+					movement.add(vec.x * spd, vec.y * spd);
+					int xd = movement.getStepX();
+					int yd = movement.getStepY();
 
 					Direction newDir = Direction.getDirection(xd, yd);
 					if (newDir == Direction.NONE) newDir = dir;
@@ -504,6 +504,7 @@ public class Player extends Mob implements ItemHolder, ClientTickable {
 				}
 			}
 
+			dir = movement.getDirection();
 
 			if (isSwimming() && tickTime % 60 == 0 && !potioneffects.containsKey(PotionType.Swim) && ride == null) { // If drowning... :P
 				if (stamina > 0) payStamina(1); // Take away stamina
@@ -834,23 +835,25 @@ public class Player extends Mob implements ItemHolder, ClientTickable {
 	private Rectangle getInteractionBox(int range) {
 		int x = this.x, y = this.y - 2;
 
-		//noinspection UnnecessaryLocalVariable
-		int paraClose = 4, paraFar = range;
-		int perpClose = 0, perpFar = 8;
-
-		int xClose = x + dir.getX() * paraClose + dir.getY() * perpClose;
-		int yClose = y + dir.getY() * paraClose + dir.getX() * perpClose;
-		int xFar = x + dir.getX() * paraFar + dir.getY() * perpFar;
-		int yFar = y + dir.getY() * paraFar + dir.getX() * perpFar;
-
-		return new Rectangle(Math.min(xClose, xFar), Math.min(yClose, yFar), Math.max(xClose, xFar), Math.max(yClose, yFar), Rectangle.CORNERS);
+		double forwardX = Math.cos(movement.rotation);
+		double forwardY = Math.sin(movement.rotation);
+		double rightX = -forwardY;
+		double rightY = forwardX;
+		int distance = (range + 4) / 2;
+		int halfLength = (range - 4) / 2;
+		int halfWidth = 4;
+		int centerX = x + (int) Math.round(forwardX * distance);
+		int centerY = y + (int) Math.round(forwardY * distance);
+		int extentX = (int) Math.round(Math.abs(forwardX) * halfLength + Math.abs(rightX) * halfWidth);
+		int extentY = (int) Math.round(Math.abs(forwardY) * halfLength + Math.abs(rightY) * halfWidth);
+		return new Rectangle(centerX - extentX, centerY - extentY, centerX + extentX, centerY + extentY, Rectangle.CORNERS);
 	}
 
 	private Point getInteractionTile() {
 		int x = this.x, y = this.y - 2;
 
-		x += dir.getX() * INTERACT_DIST;
-		y += dir.getY() * INTERACT_DIST;
+		x += (int) Math.round(Math.cos(movement.rotation) * INTERACT_DIST);
+		y += (int) Math.round(Math.sin(movement.rotation) * INTERACT_DIST);
 
 		return new Point(x >> 4, y >> 4);
 	}
@@ -997,6 +1000,9 @@ public class Player extends Mob implements ItemHolder, ClientTickable {
 
 	@Override
 	public void render(Screen screen) {
+		if (screen.isFirstPerson()) {
+			return;
+		}
 		/* Offset locations to start drawing the sprite relative to our position */
 		int xo = x - 8; // Horizontal
 		int yo = y - 11; // Vertical

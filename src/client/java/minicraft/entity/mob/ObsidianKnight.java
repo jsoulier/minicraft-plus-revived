@@ -283,4 +283,9 @@ public class ObsidianKnight extends EnemyMob {
 
 		return super.calculateEntityDamage(attacker, damage);
 	}
+
+	@Override
+	public int getGroundOffset() {
+		return 5;
+	}
 }

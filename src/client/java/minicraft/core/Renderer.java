@@ -8,6 +8,7 @@ import minicraft.entity.mob.AirWizard;
 import minicraft.entity.mob.ObsidianKnight;
 import minicraft.entity.mob.Player;
 import minicraft.gfx.Color;
+import minicraft.gfx.Context;
 import minicraft.gfx.Ellipsis;
 import minicraft.gfx.Ellipsis.DotUpdater.TickUpdater;
 import minicraft.gfx.Ellipsis.SmoothEllipsis;
@@ -64,15 +65,25 @@ public class Renderer extends Game {
 	public static int WIDTH = 288;
 	static float SCALE = 3;
 
+	private static final int MINIMAP_WIDTH = 72;
+	private static final int MINIMAP_HEIGHT = 48;
+	private static final int MINIMAP_MARGIN = 2;
+
+	private static final float EYE_HEIGHT = 12;
+	private static final float SWIM_EYE_HEIGHT = 5;
+	private static final float SWIM_BOB_AMOUNT = 1.5f;
+	private static final double SWIM_BOB_SPEED = Math.PI * 2 / 60;
+
 	public static Screen screen; // Creates the main screen
 	public static SpriteLinker spriteLinker = new SpriteLinker(); // The sprite linker for sprites
 
-	static Canvas canvas = new Canvas();
+	static Context canvas = new Context();
 	private static BufferedImage image; // Creates an image to be displayed on the screen.
 
 
 	public static boolean readyToRenderGameplay = false;
 	public static boolean showDebugInfo = false;
+	public static boolean showMinimap = true;
 
 	public static SignDisplayMenu signDisplayMenu = null;
 
@@ -106,8 +117,6 @@ public class Renderer extends Game {
 		//lightScreen = new Screen();
 
 		hudSheet = new LinkedSprite(SpriteType.Gui, "hud");
-
-		canvas.createBufferStrategy(3);
 	}
 
 
@@ -131,15 +140,6 @@ public class Renderer extends Game {
 			renderFocusNagger(); // Calls the renderFocusNagger() method, which creates the "Click to Focus" message.
 
 
-		BufferStrategy bs = canvas.getBufferStrategy(); // Creates a buffer strategy to determine how the graphics should be buffered.
-		Graphics2D g = (Graphics2D) bs.getDrawGraphics(); // Gets the graphics in which java draws the picture
-		g.clearRect(0, 0, canvas.getWidth(), canvas.getHeight()); // Draws a rect to fill the whole window (to cover last?)
-
-
-
-		// Flushes the screen to the renderer.
-		screen.flush();
-
 		// Scale the pixels.
 		int ww = getWindowSize().width;
 		int hh = getWindowSize().height;
@@ -148,17 +148,11 @@ public class Renderer extends Game {
 		int xOffset = (canvas.getWidth() - ww) / 2 + canvas.getParent().getInsets().left;
 		int yOffset = (canvas.getHeight() - hh) / 2 + canvas.getParent().getInsets().top;
 
-		// Draw the image on the window.
-		g.drawImage(image, xOffset, yOffset, ww, hh, null);
-
-		// Release any system items that are using this method. (so we don't have crappy framerates)
-		g.dispose();
-
-		// Make the picture visible.
-		bs.show();
+		canvas.draw(xOffset, yOffset, ww, hh);
 
 		// Screen capturing.
 		if (Updater.screenshot > 0) {
+			canvas.read(((DataBufferInt) image.getRaster().getDataBuffer()).getData());
 			new File(Game.gameDir + "/screenshots/").mkdirs();
 			int count = 1;
 			LocalDateTime datetime = LocalDateTime.now();
@@ -198,6 +192,18 @@ public class Renderer extends Game {
 		// if (yScroll < 0) yScroll = 0; // ...Top border.
 		// if (xScroll > (level.w << 4) - Screen.w) xScroll = (level.w << 4) - Screen.w; // ...Right border.
 		// if (yScroll > (level.h << 4) - Screen.h) yScroll = (level.h << 4) - Screen.h; // ...Bottom border.
+		renderLevel(level, xScroll, yScroll, true);
+
+		if (showMinimap) {
+			int minimapX = Screen.w - MINIMAP_MARGIN - MINIMAP_WIDTH;
+			screen.beginOffscreen();
+			renderLevel(level, xScroll, yScroll, false);
+			screen.endOffscreen(player.x - xScroll - MINIMAP_WIDTH / 2, player.y - yScroll - MINIMAP_HEIGHT / 2, minimapX, MINIMAP_MARGIN, MINIMAP_WIDTH, MINIMAP_HEIGHT);
+			screen.drawRect(minimapX - 1, MINIMAP_MARGIN - 1, MINIMAP_WIDTH + 1, MINIMAP_HEIGHT + 1, Color.WHITE);
+		}
+	}
+
+	private static void renderLevel(Level level, int xScroll, int yScroll, boolean useCamera) {
 		if (currentLevel > 3) { // If the current level is higher than 3 (which only the sky level (and dungeon) is)
 			MinicraftImage cloud = spriteLinker.getSheet(SpriteType.Tile, "cloud_background");
 			for (int y = 0; y < 28; y++)
@@ -207,6 +213,13 @@ public class Renderer extends Game {
 				}
 		}
 
+		if (useCamera) {
+			float eyeHeight = EYE_HEIGHT;
+			if (player.isSwimming()) {
+				eyeHeight = SWIM_EYE_HEIGHT + SWIM_BOB_AMOUNT * (float) Math.sin(Updater.gameTime * SWIM_BOB_SPEED);
+			}
+			screen.setCamera(player.x - xScroll, player.y - yScroll, (float) Math.cos(player.movement.rotation), (float) Math.sin(player.movement.rotation), eyeHeight);
+		}
 		level.renderBackground(screen, xScroll, yScroll); // Renders current level background
 		level.renderSprites(screen, xScroll, yScroll); // Renders level sprites on screen
 
@@ -215,6 +228,12 @@ public class Renderer extends Game {
 			int brightnessMultiplier = player.potioneffects.containsKey(PotionType.Light) ? 12 : 8; // Brightens all light sources by a factor of 1.5 when the player has the Light potion effect. (8 above is normal)
 			level.renderLight(screen, xScroll, yScroll, brightnessMultiplier); // Finds (and renders) all the light from objects (like the player, lanterns, and lava).
 			screen.overlay(currentLevel, xScroll, yScroll); // Overlays the light screen over the main screen.
+		}
+		if (useCamera) {
+			if (currentLevel == 3) {
+				screen.renderSky(player.x, player.y);
+			}
+			screen.resetCamera();
 		}
 	}
 

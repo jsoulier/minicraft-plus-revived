@@ -3,6 +3,7 @@ package minicraft.level.tile;
 import minicraft.core.io.Sound;
 import minicraft.entity.Direction;
 import minicraft.entity.mob.Mob;
+import minicraft.gfx.Context;
 import minicraft.gfx.Screen;
 import minicraft.gfx.SpriteAnimation;
 import minicraft.gfx.SpriteLinker.SpriteType;
@@ -38,7 +39,7 @@ public class SaplingTile extends Tile {
 
 	public void render(Screen screen, Level level, int x, int y) {
 		onType.render(screen, level, x, y);
-		sprite.render(screen, level, x, y);
+		sprite.render(screen, level, x, y, Context.SpriteMode.IMPOSTER, 2);
 	}
 
 	public boolean tick(Level level, int x, int y) {

@@ -1,5 +1,6 @@
 package minicraft.entity.particle;
 
+import minicraft.gfx.Context;
 import minicraft.gfx.SpriteLinker.LinkedSprite;
 import minicraft.gfx.SpriteLinker.SpriteType;
 
@@ -15,5 +16,10 @@ public class SandParticle extends Particle {
 	 */
 	public SandParticle(int x, int y) {
 		super(x, y, 180 + new Random().nextInt(81) - 40, sprite);
+	}
+
+	@Override
+	public Context.SpriteMode getSpriteMode() {
+		return Context.SpriteMode.GROUND;
 	}
 }

@@ -56,6 +56,11 @@ public class TextParticle extends Particle {
 	}
 
 	@Override
+	public int getGroundOffset() {
+		return 8;
+	}
+
+	@Override
 	public void render(Screen screen) {
 		style.setXPos(x - msg.length() * 4).setYPos(y - (int) zz).draw(msg, screen);
 	}

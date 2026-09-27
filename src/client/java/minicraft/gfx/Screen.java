@@ -8,18 +8,11 @@ import org.intellij.lang.annotations.MagicConstant;
 import org.jetbrains.annotations.NotNull;
 
 import java.awt.AlphaComposite;
-import java.awt.Graphics2D;
-import java.awt.RadialGradientPaint;
 import java.awt.image.BufferedImage;
-import java.awt.image.DataBufferByte;
 import java.awt.image.DataBufferInt;
-import java.math.BigDecimal;
-import java.math.MathContext;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.IntStream;
 
 public class Screen {
 
@@ -43,6 +36,9 @@ public class Screen {
 	private final ArrayDeque<Rendering> renderings = new ArrayDeque<>();
 	private final LightOverlay lightOverlay;
 	private ClearRendering lastClearRendering = null;
+	private boolean firstPerson;
+	private Context.SpriteMode spriteMode = Context.SpriteMode.GROUND;
+	private int spriteModeX, spriteModeY, spriteModeGroundOffset;
 
 	// Outdated Information:
 	// Since each sheet is 256x256 pixels, each one has 1024 8x8 "tiles"
@@ -58,7 +54,7 @@ public class Screen {
 
 	private interface Rendering {
 		/** Invoked by {@link Renderer#render()}. */
-		void render(Graphics2D graphics);
+		void render(Context context);
 	}
 
 	private void queue(Rendering rendering) {
@@ -75,17 +71,15 @@ public class Screen {
 		}
 
 		@Override
-		public void render(Graphics2D graphics) {
-
-			graphics.setColor(new java.awt.Color(color));
-			graphics.fillRect(0, 0, Screen.w, Screen.h);
+		public void render(Context context) {
+			context.clear(color);
 		}
 	}
 
 	private static class PlainClearRendering extends ClearRendering {
 		@Override
-		public void render(Graphics2D graphics) {
-			graphics.clearRect(0, 0, Screen.w, Screen.h);
+		public void render(Context context) {
+			context.clear(0);
 		}
 	}
 
@@ -110,40 +104,8 @@ public class Screen {
 		}
 
 		@Override
-		public void render(Graphics2D graphics) {
-			int toffs = xt + yt * sheet.width;
-			// Determines if the image should be mirrored...
-			boolean mirrorX = (mirrors & BIT_MIRROR_X) > 0; // Horizontally.
-			boolean mirrorY = (mirrors & BIT_MIRROR_Y) > 0; // Vertically.
-			for (int y = 0; y < th; ++y) { // Relative
-				if (y + yp < 0) continue; // If the pixel is out of bounds, then skip the rest of the loop.
-				if (y + yp >= h) break;
-				int sy = mirrorY ? th - 1 - y : y; // Source relative; reverse if necessary
-				for (int x = 0; x < tw; ++x) { // Relative
-					if (x + xp < 0) continue; // Skip rest if out of bounds.
-					if (x + xp >= w) break;
-					int sx = mirrorX ? tw - 1 - x : x; // Source relative; reverse if necessary
-					int col = sheet.pixels[toffs + sx + sy * sheet.width]; // Gets the color of the current pixel from the value stored in the sheet.
-					if (col >> 24 != 0) { // if not transparent
-						int index = (xp + x) + (yp + y) * w;
-						if (whiteTint != -1 && col == 0x1FFFFFF) {
-							// If this is white, write the whiteTint over it
-							pixels[index] = Color.upgrade(whiteTint);
-						} else {
-							// Inserts the colors into the image
-							if (fullBright) {
-								pixels[index] = Color.WHITE;
-							} else {
-								if (color != 0) {
-									pixels[index] = color;
-								} else {
-									pixels[index] = Color.upgrade(col);
-								}
-							}
-						}
-					}
-				}
-			}
+		public void render(Context context) {
+			context.sprite(xp, yp, xt, yt, tw, th, (mirrors & BIT_MIRROR_X) > 0, (mirrors & BIT_MIRROR_Y) > 0, whiteTint, fullBright, color, sheet);
 		}
 	}
 
@@ -159,9 +121,8 @@ public class Screen {
 		}
 
 		@Override
-		public void render(Graphics2D graphics) {
-			graphics.setColor(new java.awt.Color(color));
-			graphics.fillRect(xp, yp, w, h);
+		public void render(Context context) {
+			context.fillRect(xp, yp, w, h, color);
 		}
 	}
 
@@ -177,9 +138,8 @@ public class Screen {
 		}
 
 		@Override
-		public void render(Graphics2D graphics) {
-			graphics.setColor(new java.awt.Color(color));
-			graphics.drawRect(xp, yp, w, h);
+		public void render(Context context) {
+			context.drawRect(xp, yp, w, h, color);
 		}
 	}
 
@@ -195,9 +155,8 @@ public class Screen {
 		}
 
 		@Override
-		public void render(Graphics2D graphics) {
-			graphics.setColor(new java.awt.Color(color));
-			graphics.drawLine(x0, y0, x1, y1);
+		public void render(Context context) {
+			context.drawLine(x0, y0, x1, y1, color);
 		}
 	}
 
@@ -214,44 +173,119 @@ public class Screen {
 		}
 
 		@Override
-		public void render(Graphics2D graphics) {
+		public void render(Context context) {
 			switch (axis) {
 				case 0:
-					for (int i = 0; i < l; i++) { // 1 pixel high and 8 pixel wide
-						int idx = x0 + i + y0 * Screen.w;
-						pixels[idx] = Color.getLightnessFromRGB(pixels[idx]) >= .5 ? Color.BLACK : Color.WHITE;
-					}
+					context.drawLineSpecial(x0, y0, l, 1);
 					break;
 				case 1:
-					for (int i = 0; i < l; i++) { // 8 pixel high and 1 pixel wide
-						int idx = x0 + (y0 + i) * Screen.w;
-						pixels[idx] = Color.getLightnessFromRGB(pixels[idx]) >= .5 ? Color.BLACK : Color.WHITE;
-					}
+					context.drawLineSpecial(x0, y0, 1, l);
 					break;
 			}
+		}
+	}
+
+	private static class BeginOffscreenRendering implements Rendering {
+		@Override
+		public void render(Context context) {
+			context.beginOffscreen();
+		}
+	}
+
+	private static class EndOffscreenRendering implements Rendering {
+		private final int srcX, srcY, dstX, dstY, w, h;
+
+		public EndOffscreenRendering(int srcX, int srcY, int dstX, int dstY, int w, int h) {
+			this.srcX = srcX;
+			this.srcY = srcY;
+			this.dstX = dstX;
+			this.dstY = dstY;
+			this.w = w;
+			this.h = h;
+		}
+
+		@Override
+		public void render(Context context) {
+			context.endOffscreen(srcX, srcY, dstX, dstY, w, h);
+		}
+	}
+
+	private static class SetCameraRendering implements Rendering {
+		private final int x, y;
+		private final float dirX, dirY, eyeHeight;
+
+		public SetCameraRendering(int x, int y, float dirX, float dirY, float eyeHeight) {
+			this.x = x;
+			this.y = y;
+			this.dirX = dirX;
+			this.dirY = dirY;
+			this.eyeHeight = eyeHeight;
+		}
+
+		@Override
+		public void render(Context context) {
+			context.setCamera(x, y, dirX, dirY, eyeHeight);
+		}
+	}
+
+	private static class SkyRendering implements Rendering {
+		private final float time, windTime;
+		private final int cameraX, cameraY;
+
+		public SkyRendering(float time, float windTime, int cameraX, int cameraY) {
+			this.time = time;
+			this.windTime = windTime;
+			this.cameraX = cameraX;
+			this.cameraY = cameraY;
+		}
+
+		@Override
+		public void render(Context context) {
+			context.drawSky(time, windTime, cameraX, cameraY);
+		}
+	}
+
+	private static class ResetCameraRendering implements Rendering {
+		@Override
+		public void render(Context context) {
+			context.resetCamera();
+		}
+	}
+
+	private static class SpriteModeRendering implements Rendering {
+		private final Context.SpriteMode spriteMode;
+		private final int x, y, groundOffset;
+
+		public SpriteModeRendering(Context.SpriteMode spriteMode, int x, int y, int groundOffset) {
+			this.spriteMode = spriteMode;
+			this.x = x;
+			this.y = y;
+			this.groundOffset = groundOffset;
+		}
+
+		@Override
+		public void render(Context context) {
+			context.setSpriteMode(spriteMode, x, y, groundOffset);
 		}
 	}
 
 	private class OverlayRendering implements Rendering {
 		private final int currentLevel, xa, ya;
 		private final double darkFactor;
+		private final float[] lights;
 
 		private OverlayRendering(int currentLevel, int xa, int ya, double darkFactor) {
 			this.currentLevel = currentLevel;
 			this.xa = xa;
 			this.ya = ya;
 			this.darkFactor = darkFactor;
+			lights = lightOverlay.getLights();
 		}
 
 		@Override
-		public void render(Graphics2D graphics) {
+		public void render(Context context) {
 			double alpha = lightOverlay.getOverlayOpacity(currentLevel, darkFactor);
-			BufferedImage overlay = lightOverlay.render(xa, ya);
-			graphics.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, .02f)); // Lightening
-			graphics.setColor(java.awt.Color.WHITE);
-			graphics.fillRect(0, 0, w, h);
-			graphics.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, (float) alpha)); // Shaders
-			graphics.drawImage(overlay, null, 0, 0);
+			context.overlay(lights, (float) alpha, xa, ya);
 		}
 	}
 
@@ -259,6 +293,8 @@ public class Screen {
 	 * Clears all the colors on the screen
 	 */
 	public void clear(int color) {
+		lightOverlay.lights.clear();
+		resetSpriteMode();
 		// Turns each pixel into a single color (clearing the screen!)
 		if (color == 0) {
 			queueClearRendering(new PlainClearRendering());
@@ -272,16 +308,17 @@ public class Screen {
 		queue(clearRendering);
 	}
 
-	public void flush() {
-		Graphics2D g2d = image.createGraphics();
+	public void flush(Context context) {
 		Rendering rendering;
 		do { // Skips until the latest clear rendering is obtained.
 			rendering = renderings.poll(); // This can prevent redundant renderings operated.
 			if (rendering == null) return;
 		} while (rendering != lastClearRendering);
+		context.begin();
 		do { // Renders all renderings until all are operated.
-			rendering.render(g2d);
+			rendering.render(context);
 		} while ((rendering = renderings.poll()) != null);
+		context.end();
 	}
 
 	public void render(int xp, int yp, int xt, int yt, int bits, MinicraftImage sheet) {
@@ -383,6 +420,10 @@ public class Screen {
 		queue(new SpriteRendering(xp, yp, xt, yt, tw, th, mirrors, whiteTint, fullBright, color, sheet));
 	}
 
+	public void render(int xp, int yp, MinicraftImage sheet) {
+		render(xp - xOffset, yp - yOffset, 0, 0, sheet.width, sheet.height, sheet);
+	}
+
 	public void fillRect(int xp, int yp, int w, int h, int color) {
 		queue(new FillRectRendering(xp, yp, w, h, color));
 	}
@@ -410,6 +451,64 @@ public class Screen {
 	/** Placeholder line drawing method specialized for sign cursor drawing */
 	public void drawLineSpecial(int x0, int y0, @MagicConstant(intValues = {0, 1}) int axis, int l) {
 		queue(new DrawLineSpecialRendering(x0, y0, l, axis));
+	}
+
+	public void setCamera(int x, int y, float dirX, float dirY, float eyeHeight) {
+		firstPerson = true;
+		resetSpriteMode();
+		queue(new SetCameraRendering(x - xOffset, y - yOffset, dirX, dirY, eyeHeight));
+	}
+
+	public void renderSky(int cameraX, int cameraY) {
+		float time = (float) Updater.tickCount / Updater.dayLength;
+		float windTime = (Updater.gameTime % 216000) / 60f;
+		queue(new SkyRendering(time, windTime, cameraX, cameraY));
+	}
+
+	public void resetCamera() {
+		firstPerson = false;
+		resetSpriteMode();
+		queue(new ResetCameraRendering());
+	}
+
+	public boolean isFirstPerson() {
+		return firstPerson;
+	}
+
+	public void beginOffscreen() {
+		queue(new BeginOffscreenRendering());
+	}
+
+	public void endOffscreen(int srcX, int srcY, int dstX, int dstY, int w, int h) {
+		queue(new EndOffscreenRendering(srcX, srcY, dstX, dstY, w, h));
+	}
+
+	public void setSpriteMode(Context.SpriteMode spriteMode, int x, int y, int groundOffset) {
+		int positionX = x - xOffset;
+		int positionY = y - yOffset;
+		if (spriteMode == Context.SpriteMode.GROUND) {
+			positionX = 0;
+			positionY = 0;
+			groundOffset = 0;
+		}
+		boolean sameMode = spriteMode == this.spriteMode;
+		boolean samePosition = positionX == spriteModeX && positionY == spriteModeY;
+		boolean sameGroundOffset = groundOffset == spriteModeGroundOffset;
+		if (sameMode && samePosition && sameGroundOffset) {
+			return;
+		}
+		this.spriteMode = spriteMode;
+		spriteModeX = positionX;
+		spriteModeY = positionY;
+		spriteModeGroundOffset = groundOffset;
+		queue(new SpriteModeRendering(spriteMode, positionX, positionY, groundOffset));
+	}
+
+	private void resetSpriteMode() {
+		spriteMode = Context.SpriteMode.GROUND;
+		spriteModeX = 0;
+		spriteModeY = 0;
+		spriteModeGroundOffset = 0;
 	}
 
 	/**
@@ -469,36 +568,7 @@ public class Screen {
 	}
 
 	private static class LightOverlay {
-		private static final int[] dither = new int[] {
-			0, 8, 2, 10,
-			12, 4, 14, 6,
-			3, 11, 1, 9,
-			15, 7, 13, 5
-		};
-
-		public final float[] graFractions;
-		public final java.awt.Color[] graColors;
-		public final BufferedImage buffer = new BufferedImage(w, h, BufferedImage.TYPE_BYTE_GRAY);
-		public final byte[] bufPixels;
-		public final BufferedImage overlay = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
-		public final int[] olPixels;
 		public final HashMap<@NotNull Point, @NotNull Integer> lights = new HashMap<>();
-
-		public LightOverlay() {
-			bufPixels = ((DataBufferByte) buffer.getRaster().getDataBuffer()).getData();
-			olPixels = ((DataBufferInt) overlay.getRaster().getDataBuffer()).getData();
-			ArrayList<Float> graFractions = new ArrayList<>();
-			ArrayList<java.awt.Color> graColors = new ArrayList<>();
-			BigDecimal oneFiftieth = BigDecimal.ONE.divide(BigDecimal.valueOf(50), MathContext.UNLIMITED);
-			BigDecimal twoFiveFive = BigDecimal.valueOf(255);
-			for (BigDecimal i = BigDecimal.ZERO; i.compareTo(BigDecimal.ONE) <= 0; i = i.add(oneFiftieth)) {
-				graFractions.add(i.floatValue());
-				graColors.add(new java.awt.Color(255, 255, 255, 255 - i.pow(4).multiply(twoFiveFive).intValue()));
-			}
-			this.graFractions = new float[graFractions.size()];
-			for (int i = 0; i < graFractions.size(); ++i) this.graFractions[i] = graFractions.get(i);
-			this.graColors = graColors.toArray(new java.awt.Color[0]);
-		}
 
 		/**
 		 * Gets the overlay light darkness opacity instantly.
@@ -521,52 +591,16 @@ public class Screen {
 			lights.put(new Point(x, y), r);
 		}
 
-		public BufferedImage render(int xa, int ya) {
-			Graphics2D g2d = buffer.createGraphics();
-			g2d.setBackground(java.awt.Color.BLACK);
-			g2d.clearRect(0, 0, w, h);
-			for (Map.Entry<Point, Integer> e : lights.entrySet()) {
-				int x = e.getKey().x, y = e.getKey().y, r = e.getValue();
-				boolean[] surrounds = new boolean[8];
-				for (int xx = -16; xx < 17; ++xx) {
-					for (int yy = -16; yy < 17; ++yy) {
-						if (xx != 0 || yy != 0) {
-							Point pp = new Point(x + xx, y + yy);
-							if (lights.containsKey(pp) && r <= lights.get(pp)) {
-								double theta = Math.atan2(yy, xx);
-								if (theta < 0) theta += 2 * Math.PI; // Ensures it is positive.
-								surrounds[(int) (theta * 4 / Math.PI)] = true;
-							}
-						}
-					}
-				}
-
-				// Reduce lighting circles on screen
-				if (IntStream.range(0, surrounds.length).allMatch(i -> surrounds[i])) {
-					g2d.setColor(java.awt.Color.WHITE);
-					g2d.fillRect(x - 8, y - 8, 16, 16);
-				} else {
-					g2d.setPaint(new RadialGradientPaint(x, y, r, graFractions, graColors));
-					g2d.fillOval(x - r, y - r, r * 2, r * 2);
-				}
+		public float[] getLights() {
+			float[] data = new float[lights.size() * 3];
+			int i = 0;
+			for (Map.Entry<Point, Integer> light : lights.entrySet()) {
+				data[i] = light.getKey().x;
+				data[i + 1] = light.getKey().y;
+				data[i + 2] = light.getValue();
+				i += 3;
 			}
-			g2d.dispose();
-			lights.clear();
-
-			for (int x = 0; x < w; ++x) {
-				for (int y = 0; y < h; ++y) {
-					int i = x + y * w;
-					// Grade of lightness
-					int grade = bufPixels[i] & 0xFF;
-					// (a + b) & 3 acts like (a + b) % 4
-					if (grade / 10 <= dither[((x + xa) & 3) + ((y + ya) & 3) * 4]) {
-						olPixels[i] = (255 - grade) << 24;
-					} else {
-						olPixels[i] = 0;
-					}
-				}
-			}
-			return overlay;
+			return data;
 		}
 	}
 }

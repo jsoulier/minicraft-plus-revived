@@ -33,4 +33,9 @@ public class Pig extends PassiveMob {
 
 		super.die();
 	}
+
+	@Override
+	public int getGroundOffset() {
+		return 3;
+	}
 }

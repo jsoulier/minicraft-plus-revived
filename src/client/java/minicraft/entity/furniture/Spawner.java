@@ -237,4 +237,9 @@ public class Spawner extends Furniture {
 	public @NotNull Furniture copy() {
 		return new Spawner(mob);
 	}
+
+	@Override
+	public int getGroundOffset() {
+		return 8;
+	}
 }
