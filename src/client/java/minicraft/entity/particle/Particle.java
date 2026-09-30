@@ -50,6 +50,11 @@ public class Particle extends Entity implements ClientTickable {
 	}
 
 	@Override
+	public int getGroundOffset() {
+		return 16;
+	}
+
+	@Override
 	public void render(Screen screen) {
 		screen.render(x, y, sprite);
 	}

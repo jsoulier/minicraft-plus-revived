@@ -218,6 +218,10 @@ public class Updater extends Game {
 					Renderer.showDebugInfo = !Renderer.showDebugInfo;
 				}
 
+				if (currentDisplay == null && input.inputPressed("minimap")) {
+					Renderer.showMinimap = !Renderer.showMinimap;
+				}
+
 				// For debugging only
 				{
 					// Quick Level change: move the player for -1, or 1 levels

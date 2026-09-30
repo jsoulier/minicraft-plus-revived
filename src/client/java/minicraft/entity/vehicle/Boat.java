@@ -14,6 +14,7 @@ import minicraft.item.Items;
 import minicraft.level.tile.LavaTile;
 import minicraft.level.tile.Tiles;
 import minicraft.level.tile.WaterTile;
+import minicraft.util.MovementHandler;
 import minicraft.util.Vector2;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -32,10 +33,16 @@ public class Boat extends Entity implements PlayerRideable {
 
 	private int walkDist = 0;
 	private int unitMoveCounter = 0;
+	private final MovementHandler movement = new MovementHandler();
 
 	public Boat(@NotNull Direction dir) {
 		super(6, 6);
 		this.dir = dir;
+	}
+
+	@Override
+	public int getGroundOffset() {
+		return 12;
 	}
 
 	@Override
@@ -142,9 +149,12 @@ public class Boat extends Entity implements PlayerRideable {
 		if (inLava) {
 			if (Updater.tickCount % 2 != 0) return true; // A bit slower when in lava.
 		} else if (!inWater && Updater.tickCount % 4 != 0) return true; // Slower when not in water.
-		int xd = (int) (vec.x * MOVE_SPEED);
-		int yd = (int) (vec.y * MOVE_SPEED);
-		dir = Direction.getDirection(xd, yd);
+		movement.add(vec.x * MOVE_SPEED, vec.y * MOVE_SPEED);
+		int xd = movement.getStepX();
+		int yd = movement.getStepY();
+		if (xd != 0 || yd != 0) {
+			dir = Direction.getDirection(xd, yd);
+		}
 		if (passenger.stamina > 0 && move(xd, yd)) {
 			if (!(inWater || inLava) || (inLava && Updater.tickCount % 4 == 0) ||
 				(inWater && Updater.tickCount % 2 != 0)) walkDist++; // Slower the animation

@@ -10,6 +10,7 @@ import minicraft.entity.particle.SmashParticle;
 import minicraft.entity.particle.TextParticle;
 import minicraft.entity.vehicle.Boat;
 import minicraft.gfx.Color;
+import minicraft.gfx.Context;
 import minicraft.gfx.Screen;
 import minicraft.gfx.SpriteAnimation;
 import minicraft.gfx.SpriteLinker.SpriteType;
@@ -53,7 +54,7 @@ public class CactusTile extends Tile {
 	@Override
 	public void render(Screen screen, Level level, int x, int y) {
 		Tiles.get("Sand").render(screen, level, x, y);
-		sprite.render(screen, level, x, y);
+		sprite.render(screen, level, x, y, Context.SpriteMode.IMPOSTER);
 	}
 
 	public void bumpedInto(Level level, int x, int y, Entity entity) {

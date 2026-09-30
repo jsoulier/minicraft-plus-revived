@@ -78,7 +78,9 @@ public class Spark extends Entity {
 		}
 
 		sprite.setMirror(randmirror);
-		screen.render(x - 4, y - 4 + 2, sprite.getSprite(), 0, false, Color.BLACK); // renders the shadow on the ground
+		if (!screen.isFirstPerson()) {
+			screen.render(x - 4, y - 4 + 2, sprite.getSprite(), 0, false, Color.BLACK); // renders the shadow on the ground
+		}
 		screen.render(x - 4, y - 4 - 2, sprite); // Renders the spark
 	}
 

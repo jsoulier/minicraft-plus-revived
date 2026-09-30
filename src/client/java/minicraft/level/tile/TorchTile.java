@@ -3,6 +3,7 @@ package minicraft.level.tile;
 import minicraft.core.io.Sound;
 import minicraft.entity.Direction;
 import minicraft.entity.mob.Player;
+import minicraft.gfx.Context;
 import minicraft.gfx.Screen;
 import minicraft.gfx.SpriteAnimation;
 import minicraft.gfx.SpriteLinker.SpriteType;
@@ -34,7 +35,7 @@ public class TorchTile extends Tile {
 
 	public void render(Screen screen, Level level, int x, int y) {
 		Tiles.get((short) level.getData(x, y)).render(screen, level, x, y);
-		sprite.render(screen, level, x, y);
+		sprite.render(screen, level, x, y, Context.SpriteMode.IMPOSTER);
 	}
 
 	public int getLightRadius(Level level, int x, int y) {

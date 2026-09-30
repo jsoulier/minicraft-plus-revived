@@ -20,6 +20,8 @@ public class MinicraftImage {
 
 	public final int width, height; // Width and height of the sprite sheet
 	public final int[] pixels; // Integer array of the image's pixels
+	Texture texture;
+	public boolean dirty = true;
 
 	/**
 	 * Initializes a {@code MinicraftImage} instance from the provided size.
@@ -80,15 +82,15 @@ public class MinicraftImage {
 			blue = (pixels[i] & 0xff);
 
 			// This stuff is to figure out if the pixel is transparent or not
-			int transparent = 1;
+			int transparent = 0xFF;
 
-			// A value of 0 means transparent, a value of 1 means opaque
+			// A value of 0 means transparent, a value of 0xFF means opaque
 			if (pixels[i] >> 24 == 0x00) {
 				transparent = 0;
 			}
 
 			// Actually put the data in the array
-			// Uses 25 bits to store everything (8 for red, 8 for green, 8 for blue, and 1 for alpha)
+			// Uses 32 bits to store everything (8 for red, 8 for green, 8 for blue, and 8 for alpha)
 			pixels[i] = (transparent << 24) + red + green + blue;
 		}
 	}

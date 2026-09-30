@@ -53,10 +53,15 @@ public class InputHandler implements KeyListener {
 	private boolean overwrite = false;
 
 	private final boolean controllersSupported;
+
+	private static final float CONTROLLER_DEAD_ZONE = 0.2f;
+	private static final int CONTROLLER_REPEAT_TIME = 30;
+
 	private ControllerManager controllerManager;
 	private ControllerIndex controllerIndex; // Please prevent getting button states directly from this object.
 	private HashMap<ControllerButton, Boolean> controllerButtonBooleanMapJust = new HashMap<>();
 	private HashMap<ControllerButton, Boolean> controllerButtonBooleanMap = new HashMap<>();
+	private HashMap<ControllerButton, Integer> controllerButtonIntegerMapTicks = new HashMap<>();
 
 	public String getChangedKey() {
 		String key = keyChanged + ";" + keymap.get(keyChanged);
@@ -134,11 +139,40 @@ public class InputHandler implements KeyListener {
 		inputSource.addKeyListener(this); // Add key listener to game
 	}
 
+	private float getStick(ControllerAxis axis) {
+		if (!controllersSupported) {
+			return 0;
+		}
+		try {
+			float value = controllerIndex.getAxisState(axis);
+			if (Math.abs(value) < CONTROLLER_DEAD_ZONE) {
+				return 0;
+			}
+			return value;
+		} catch (ControllerUnpluggedException e) {
+			return 0;
+		}
+	}
+
+	public float leftStickX() {
+		return getStick(ControllerAxis.LEFTX);
+	}
+
+	public float leftStickY() {
+		return getStick(ControllerAxis.LEFTY);
+	}
+
+	public float rightStickX() {
+		return getStick(ControllerAxis.RIGHTX);
+	}
+
 	private void initKeyMap() {
 		keymap.put("MOVE-UP", "UP|W");
 		keymap.put("MOVE-DOWN", "DOWN|S");
-		keymap.put("MOVE-LEFT", "LEFT|A");
-		keymap.put("MOVE-RIGHT", "RIGHT|D");
+		keymap.put("MOVE-LEFT", "A");
+		keymap.put("MOVE-RIGHT", "D");
+		keymap.put("TURN-LEFT", "LEFT");
+		keymap.put("TURN-RIGHT", "RIGHT");
 
 		keymap.put("CURSOR-UP", "UP");
 		keymap.put("CURSOR-DOWN", "DOWN");
@@ -172,6 +206,7 @@ public class InputHandler implements KeyListener {
 		keymap.put("TOGGLEHUD", "F1"); // Toggle HUD
 		keymap.put("SCREENSHOT", "F2"); // To make screenshot
 		keymap.put("INFO", "SHIFT-I"); // Toggle player stats display
+		keymap.put("MINIMAP", "M");
 
 		keymap.put("FULLSCREEN", "F11");
 	}
@@ -237,6 +272,14 @@ public class InputHandler implements KeyListener {
 					controllerButtonBooleanMap.put(btn, controllerIndex.isButtonPressed(btn));
 				} catch (ControllerUnpluggedException e) {
 					controllerButtonBooleanMap.put(btn, false);
+				}
+				int ticks = 0;
+				if (controllerButtonBooleanMap.get(btn)) {
+					ticks = controllerButtonIntegerMapTicks.getOrDefault(btn, 0) + 1;
+				}
+				controllerButtonIntegerMapTicks.put(btn, ticks);
+				if (ticks > CONTROLLER_REPEAT_TIME) {
+					controllerButtonBooleanMapJust.put(btn, true);
 				}
 			}
 		}

@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "client",
+            "request": "launch",
+            "mainClass": "minicraft.core.Game",
+            "projectName": "client",
+            "cwd": "${workspaceFolder}",
+            "args": ["--savedir", "${workspaceFolder}/run"],
+        }
+    ]
+}

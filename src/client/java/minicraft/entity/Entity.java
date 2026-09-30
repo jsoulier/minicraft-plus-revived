@@ -3,6 +3,7 @@ package minicraft.entity;
 import minicraft.core.Action;
 import minicraft.core.Updater;
 import minicraft.entity.mob.Player;
+import minicraft.gfx.Context;
 import minicraft.gfx.Rectangle;
 import minicraft.gfx.Screen;
 import minicraft.item.Item;
@@ -67,6 +68,14 @@ public abstract class Entity implements Tickable {
 	}
 
 	public abstract void render(Screen screen); // Used to render the entity on screen.
+
+	public Context.SpriteMode getSpriteMode() {
+		return Context.SpriteMode.BILLBOARD;
+	}
+
+	public int getGroundOffset() {
+		return 4;
+	}
 
 	@Override
 	public abstract void tick(); // Used to update the entity.

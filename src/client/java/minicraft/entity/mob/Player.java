@@ -58,6 +58,7 @@ import minicraft.screen.SkinDisplay;
 import minicraft.screen.WorldSelectDisplay;
 import minicraft.util.AdvancementElement;
 import minicraft.util.Logging;
+import minicraft.util.MovementHandler;
 import minicraft.util.Vector2;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -75,6 +76,7 @@ public class Player extends Mob implements ItemHolder, ClientTickable {
 	public static final int MAX_MULTIPLIER = 50; // Maximum score multiplier.
 
 	public double moveSpeed = 1; // The number of coordinate squares to move; each tile is 16x16.
+	public final MovementHandler movement = new MovementHandler();
 	private int score; // The player's score
 
 	private int multipliertime = mtm; // Time left on the current multiplier.
@@ -474,10 +476,7 @@ public class Player extends Mob implements ItemHolder, ClientTickable {
 			// Move while we are not falling.
 			if (onFallDelay <= 0) {
 				// controlInput.buttonPressed is used because otherwise the player will move one even if held down.
-				if (input.inputDown("move-up")) vec.y--;
-				if (input.inputDown("move-down")) vec.y++;
-				if (input.inputDown("move-left")) vec.x--;
-				if (input.inputDown("move-right")) vec.x++;
+				vec = movement.update(input, getRide() == null);
 
 
 			}
@@ -492,8 +491,9 @@ public class Player extends Mob implements ItemHolder, ClientTickable {
 					}
 				} else {
 					double spd = moveSpeed * (potioneffects.containsKey(PotionType.Speed) ? 1.5D : 1);
-					int xd = (int) (vec.x * spd);
-					int yd = (int) (vec.y * spd);
+					movement.add(vec.x * spd, vec.y * spd);
+					int xd = movement.getStepX();
+					int yd = movement.getStepY();
 
 					Direction newDir = Direction.getDirection(xd, yd);
 					if (newDir == Direction.NONE) newDir = dir;
@@ -504,6 +504,7 @@ public class Player extends Mob implements ItemHolder, ClientTickable {
 				}
 			}
 
+			dir = movement.getDirection();
 
 			if (isSwimming() && tickTime % 60 == 0 && !potioneffects.containsKey(PotionType.Swim) && ride == null) { // If drowning... :P
 				if (stamina > 0) payStamina(1); // Take away stamina

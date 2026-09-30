@@ -197,6 +197,24 @@ public class SpriteAnimation implements Destroyable {
 	 * @param y The y coordinate level tile.
 	 */
 	public void render(Screen screen, Level level, int x, int y) {
+		render(screen, level, x, y, Context.SpriteMode.GROUND);
+	}
+
+	public void render(Screen screen, Level level, int x, int y, Context.SpriteMode spriteMode) {
+		// TODO: To get an alright looking wall sprite, I'm using the "all surrounded" wall. It looks okay but not great
+		boolean isSurrounded = spriteMode == Context.SpriteMode.WALL && screen.isFirstPerson();
+		int positionX = x << 4;
+		int positionY = y << 4;
+		int groundOffset = 0;
+		if (spriteMode == Context.SpriteMode.IMPOSTER) {
+			positionX += 8;
+			positionY += 8;
+			groundOffset = 8;
+		} else if (spriteMode == Context.SpriteMode.WALL) {
+			groundOffset = 16;
+		}
+		screen.setSpriteMode(spriteMode, positionX, positionY, groundOffset);
+
 		// If border and the tile class is set.
 		if (connectionChecker != null && (border != null || corner != null)) {
 			boolean u = connectionChecker.check(level, x, y - 1, level.getTile(x, y - 1), true);
@@ -208,6 +226,11 @@ public class SpriteAnimation implements Destroyable {
 			boolean dl = connectionChecker.check(level, x - 1, y + 1, level.getTile(x - 1, y + 1), false);
 			boolean ur = connectionChecker.check(level, x + 1, y - 1, level.getTile(x + 1, y - 1), false);
 			boolean dr = connectionChecker.check(level, x + 1, y + 1, level.getTile(x + 1, y + 1), false);
+
+			if (isSurrounded) {
+				u = d = l = r = true;
+				ul = dl = ur = dr = true;
+			}
 
 			x = x << 4;
 			y = y << 4;

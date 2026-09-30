@@ -4,6 +4,7 @@ import minicraft.core.Game;
 import minicraft.core.Updater;
 import minicraft.core.io.Localization;
 import minicraft.core.io.Settings;
+import minicraft.entity.Direction;
 import minicraft.entity.Entity;
 import minicraft.entity.ItemEntity;
 import minicraft.entity.furniture.Chest;
@@ -25,6 +26,7 @@ import minicraft.entity.mob.Skeleton;
 import minicraft.entity.mob.Slime;
 import minicraft.entity.mob.Snake;
 import minicraft.entity.mob.Zombie;
+import minicraft.gfx.Context;
 import minicraft.gfx.Point;
 import minicraft.gfx.Rectangle;
 import minicraft.gfx.Screen;
@@ -63,6 +65,7 @@ public class Level {
 	}
 
 	private static final int MOB_SPAWN_FACTOR = 100; // The chance of a mob actually trying to spawn when trySpawn is called equals: mobCount / maxMobCount * MOB_SPAWN_FACTOR. so, it basically equals the chance, 1/number, of a mob spawning when the mob cap is reached. I hope that makes sense...
+	private static final int FIRST_PERSON_RENDER_DISTANCE = 20;
 
 	public int w, h; // Width and height of the level
 	private final long seed; // The used seed that was used to generate the world
@@ -590,9 +593,15 @@ public class Level {
 		int yo = yScroll >> 4;
 		int w = (Screen.w) >> 4; // There used to be a "+15" as in below method
 		int h = (Screen.h) >> 4;
+		if (screen.isFirstPerson()) {
+			xo = (Game.player.x >> 4) - FIRST_PERSON_RENDER_DISTANCE;
+			yo = (Game.player.y >> 4) - FIRST_PERSON_RENDER_DISTANCE;
+			w = h = FIRST_PERSON_RENDER_DISTANCE * 2;
+		}
 		screen.setOffset(xScroll, yScroll);
 		for (int y = yo; y <= h + yo; y++) {
 			for (int x = xo; x <= w + xo; x++) {
+				screen.setSpriteMode(Context.SpriteMode.GROUND, x << 4, y << 4, 0);
 				getTile(x, y).render(screen, this, x, y);
 			}
 		}
@@ -604,6 +613,11 @@ public class Level {
 		int yo = yScroll >> 4;
 		int w = (Screen.w + 15) >> 4;
 		int h = (Screen.h + 15) >> 4;
+		if (screen.isFirstPerson()) {
+			xo = (Game.player.x >> 4) - FIRST_PERSON_RENDER_DISTANCE;
+			yo = (Game.player.y >> 4) - FIRST_PERSON_RENDER_DISTANCE;
+			w = h = FIRST_PERSON_RENDER_DISTANCE * 2;
+		}
 
 		screen.setOffset(xScroll, yScroll);
 		sortAndRender(screen, getEntitiesInTiles(xo - 1, yo - 1, xo + w + 1, yo + h + 1));
@@ -643,9 +657,59 @@ public class Level {
 		list.sort(spriteSorter);
 		for (Entity e : list) {
 			if (e.getLevel() == this && !e.isRemoved())
-				e.render(screen);
+				renderEntity(screen, e);
 			else
 				remove(e);
+		}
+	}
+
+	private void renderEntity(Screen screen, Entity e) {
+		if (!screen.isFirstPerson()) {
+			e.render(screen);
+			return;
+		}
+		if (e == Game.player) {
+			return;
+		}
+		// We need to temporarily change the mob's direction to be oriented relative to the player
+		Direction realDir = null;
+		if (e instanceof Mob && ((Mob) e).hasDirectionalSprites()) {
+			Mob mob = (Mob) e;
+			realDir = mob.dir;
+			mob.dir = getViewDirection(mob);
+		}
+		screen.setSpriteMode(e.getSpriteMode(), e.x, e.y, e.getGroundOffset());
+		e.render(screen);
+		if (realDir != null) {
+			((Mob) e).dir = realDir;
+		}
+	}
+
+	private static Direction getViewDirection(Mob mob) {
+		if (mob.dir == Direction.NONE) {
+			return mob.dir;
+		}
+		double dx = mob.x - Game.player.x;
+		double dy = mob.y - Game.player.y;
+		if (dx == 0 && dy == 0) {
+			return Direction.DOWN;
+		}
+		double rightX = -dy;
+		double rightY = dx;
+		double forwardDot = -(mob.dir.getX() * dx + mob.dir.getY() * dy);
+		double rightDot = mob.dir.getX() * rightX + mob.dir.getY() * rightY;
+		if (Math.abs(forwardDot) >= Math.abs(rightDot)) {
+			if (forwardDot > 0) {
+				return Direction.DOWN;
+			} else {
+				return Direction.UP;
+			}
+		} else {
+			if (rightDot > 0) {
+				return Direction.RIGHT;
+			} else {
+				return Direction.LEFT;
+			}
 		}
 	}
 

@@ -11,6 +11,8 @@ import minicraft.entity.mob.Player;
 import minicraft.entity.particle.SmashParticle;
 import minicraft.entity.particle.TextParticle;
 import minicraft.gfx.Color;
+import minicraft.gfx.Context;
+import minicraft.gfx.Screen;
 import minicraft.gfx.SpriteAnimation;
 import minicraft.gfx.SpriteLinker.SpriteType;
 import minicraft.item.Item;
@@ -48,6 +50,11 @@ public class WallTile extends Tile {
 				sprite = obsidian;
 				break;
 		}
+	}
+
+	@Override
+	public void render(Screen screen, Level level, int x, int y) {
+		sprite.render(screen, level, x, y, Context.SpriteMode.WALL);
 	}
 
 	public boolean mayPass(Level level, int x, int y, Entity e) {

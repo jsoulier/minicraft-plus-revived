@@ -91,6 +91,15 @@ public abstract class Mob extends Entity {
 	}
 
 	@Override
+	public int getGroundOffset() {
+		return 5;
+	}
+
+	public boolean hasDirectionalSprites() {
+		return sprites != null && sprites.length >= 4;
+	}
+
+	@Override
 	public boolean move(int xd, int yd) {
 		return move(xd, yd, true);
 	} // Move the mob, overrides from Entity

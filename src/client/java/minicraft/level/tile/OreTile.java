@@ -9,6 +9,7 @@ import minicraft.entity.mob.Player;
 import minicraft.entity.particle.SmashParticle;
 import minicraft.entity.particle.TextParticle;
 import minicraft.gfx.Color;
+import minicraft.gfx.Context;
 import minicraft.gfx.Screen;
 import minicraft.gfx.SpriteAnimation;
 import minicraft.gfx.SpriteLinker.SpriteType;
@@ -54,7 +55,7 @@ public class OreTile extends Tile {
 			Tiles.get("cloud").render(screen, level, x, y);
 		else
 			Tiles.get("dirt").render(screen, level, x, y);
-		sprite.render(screen, level, x, y);
+		sprite.render(screen, level, x, y, Context.SpriteMode.IMPOSTER);
 	}
 
 	public boolean mayPass(Level level, int x, int y, Entity e) {
