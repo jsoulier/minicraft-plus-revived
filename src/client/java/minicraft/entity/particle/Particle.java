@@ -51,7 +51,7 @@ public class Particle extends Entity implements ClientTickable {
 
 	@Override
 	public int getGroundOffset() {
-		return 16;
+		return 15;
 	}
 
 	@Override

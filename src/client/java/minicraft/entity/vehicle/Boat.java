@@ -42,7 +42,11 @@ public class Boat extends Entity implements PlayerRideable {
 
 	@Override
 	public int getGroundOffset() {
-		return 12;
+		if (dir == Direction.LEFT || dir == Direction.RIGHT) {
+			return 4;
+		} else {
+			return 9;
+		}
 	}
 
 	@Override
@@ -74,6 +78,9 @@ public class Boat extends Entity implements PlayerRideable {
 	@Override
 	public void tick() {
 		if (isRemoved()) return;
+		if (passenger instanceof Mob) {
+			dir = ((Mob) passenger).dir;
+		}
 		if (level != null && level.getTile(x >> 4, y >> 4) == Tiles.get("lava")) {
 			hurt();
 			if (isRemoved()) return;
@@ -152,9 +159,6 @@ public class Boat extends Entity implements PlayerRideable {
 		movement.add(vec.x * MOVE_SPEED, vec.y * MOVE_SPEED);
 		int xd = movement.getStepX();
 		int yd = movement.getStepY();
-		if (xd != 0 || yd != 0) {
-			dir = Direction.getDirection(xd, yd);
-		}
 		if (passenger.stamina > 0 && move(xd, yd)) {
 			if (!(inWater || inLava) || (inLava && Updater.tickCount % 4 == 0) ||
 				(inWater && Updater.tickCount % 2 != 0)) walkDist++; // Slower the animation

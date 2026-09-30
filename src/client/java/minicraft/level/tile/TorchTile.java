@@ -35,7 +35,7 @@ public class TorchTile extends Tile {
 
 	public void render(Screen screen, Level level, int x, int y) {
 		Tiles.get((short) level.getData(x, y)).render(screen, level, x, y);
-		sprite.render(screen, level, x, y, Context.SpriteMode.IMPOSTER);
+		sprite.render(screen, level, x, y, Context.SpriteMode.IMPOSTER, 4);
 	}
 
 	public int getLightRadius(Level level, int x, int y) {

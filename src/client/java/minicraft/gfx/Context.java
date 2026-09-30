@@ -484,12 +484,20 @@ public class Context extends AWTGLCanvas {
 	}
 
 	private void flush() {
-		orderedBatch.draw();
+		drawOrdered();
 		if (!depthBatch.textures.isEmpty()) {
 			glEnable(GL_DEPTH_TEST);
+			glDepthFunc(GL_LESS);
 			depthBatch.draw();
 			glDisable(GL_DEPTH_TEST);
 		}
+	}
+
+	private void drawOrdered() {
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_ALWAYS);
+		orderedBatch.draw();
+		glDisable(GL_DEPTH_TEST);
 	}
 
 	private void prepareTexture(MinicraftImage image) {
@@ -498,7 +506,7 @@ public class Context extends AWTGLCanvas {
 			textureReferences.add(new TextureReference(image, textureDeletionQueue));
 		}
 		if (image.dirty) {
-			orderedBatch.draw();
+			drawOrdered();
 			image.texture.upload(image.pixels);
 			image.dirty = false;
 		}

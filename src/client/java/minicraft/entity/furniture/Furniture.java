@@ -69,7 +69,7 @@ public class Furniture extends Entity {
 
 	@Override
 	public int getGroundOffset() {
-		return 8;
+		return 7;
 	}
 
 	/**

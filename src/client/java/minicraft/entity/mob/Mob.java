@@ -92,7 +92,7 @@ public abstract class Mob extends Entity {
 
 	@Override
 	public int getGroundOffset() {
-		return 5;
+		return 4;
 	}
 
 	public boolean hasDirectionalSprites() {
