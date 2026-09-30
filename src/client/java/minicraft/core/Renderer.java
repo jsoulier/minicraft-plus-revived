@@ -230,6 +230,9 @@ public class Renderer extends Game {
 			screen.overlay(currentLevel, xScroll, yScroll); // Overlays the light screen over the main screen.
 		}
 		if (useCamera) {
+			if (currentLevel == 3) {
+				screen.renderSky();
+			}
 			screen.resetCamera();
 		}
 	}

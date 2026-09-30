@@ -235,6 +235,19 @@ public class Screen {
 		}
 	}
 
+	private static class SkyRendering implements Rendering {
+		private final float time;
+
+		public SkyRendering(float time) {
+			this.time = time;
+		}
+
+		@Override
+		public void render(Context context) {
+			context.drawSky(time);
+		}
+	}
+
 	private static class ResetCameraRendering implements Rendering {
 		@Override
 		public void render(Context context) {
@@ -409,6 +422,10 @@ public class Screen {
 		queue(new SpriteRendering(xp, yp, xt, yt, tw, th, mirrors, whiteTint, fullBright, color, sheet));
 	}
 
+	public void render(int xp, int yp, MinicraftImage sheet) {
+		render(xp - xOffset, yp - yOffset, 0, 0, sheet.width, sheet.height, sheet);
+	}
+
 	public void fillRect(int xp, int yp, int w, int h, int color) {
 		queue(new FillRectRendering(xp, yp, w, h, color));
 	}
@@ -442,6 +459,11 @@ public class Screen {
 		firstPerson = true;
 		resetSpriteMode();
 		queue(new SetCameraRendering(x - xOffset, y - yOffset, dirX, dirY, eyeHeight));
+	}
+
+	public void renderSky() {
+		float time = (float) Updater.tickCount / Updater.dayLength;
+		queue(new SkyRendering(time));
 	}
 
 	public void resetCamera() {

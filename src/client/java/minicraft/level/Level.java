@@ -65,7 +65,8 @@ public class Level {
 	}
 
 	private static final int MOB_SPAWN_FACTOR = 100; // The chance of a mob actually trying to spawn when trySpawn is called equals: mobCount / maxMobCount * MOB_SPAWN_FACTOR. so, it basically equals the chance, 1/number, of a mob spawning when the mob cap is reached. I hope that makes sense...
-	private static final int FIRST_PERSON_RENDER_DISTANCE = 20;
+	private static final int RENDER_DISTANCE = 20;
+	private static final int ENTITY_RENDER_DISTANCE = 40;
 
 	public int w, h; // Width and height of the level
 	private final long seed; // The used seed that was used to generate the world
@@ -594,9 +595,9 @@ public class Level {
 		int w = (Screen.w) >> 4; // There used to be a "+15" as in below method
 		int h = (Screen.h) >> 4;
 		if (screen.isFirstPerson()) {
-			xo = (Game.player.x >> 4) - FIRST_PERSON_RENDER_DISTANCE;
-			yo = (Game.player.y >> 4) - FIRST_PERSON_RENDER_DISTANCE;
-			w = h = FIRST_PERSON_RENDER_DISTANCE * 2;
+			xo = (Game.player.x >> 4) - RENDER_DISTANCE;
+			yo = (Game.player.y >> 4) - RENDER_DISTANCE;
+			w = h = RENDER_DISTANCE * 2;
 		}
 		screen.setOffset(xScroll, yScroll);
 		for (int y = yo; y <= h + yo; y++) {
@@ -614,9 +615,9 @@ public class Level {
 		int w = (Screen.w + 15) >> 4;
 		int h = (Screen.h + 15) >> 4;
 		if (screen.isFirstPerson()) {
-			xo = (Game.player.x >> 4) - FIRST_PERSON_RENDER_DISTANCE;
-			yo = (Game.player.y >> 4) - FIRST_PERSON_RENDER_DISTANCE;
-			w = h = FIRST_PERSON_RENDER_DISTANCE * 2;
+			xo = (Game.player.x >> 4) - ENTITY_RENDER_DISTANCE;
+			yo = (Game.player.y >> 4) - ENTITY_RENDER_DISTANCE;
+			w = h = ENTITY_RENDER_DISTANCE * 2;
 		}
 
 		screen.setOffset(xScroll, yScroll);

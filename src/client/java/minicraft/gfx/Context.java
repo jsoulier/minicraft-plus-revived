@@ -17,7 +17,7 @@ import static org.lwjgl.opengl.GL33C.*;
 public class Context extends AWTGLCanvas {
 	private static final float FOV = (float) Math.toRadians(70);
 	private static final float WORLD_NEAR = 1;
-	private static final float WORLD_FAR = 16 * 30;
+	private static final float WORLD_FAR = 16 * 60;
 	private static final float TILE_SIZE = 16;
 	private static final int BYTES_PER_VERTEX = 32;
 	private static final int VERTICES_PER_QUAD = 6;
@@ -129,9 +129,9 @@ public class Context extends AWTGLCanvas {
 
 	private int framebuffer, depthRenderbuffer, offscreenFramebuffer;
 	private Texture colorTexture, positionTexture, offscreenTexture, lightTexture;
-	private Shader spriteShader, lightingShader;
+	private Shader spriteShader, lightingShader, skyShader;
 	private int emptyVao;
-	private int spriteViewProjection, lightingFirstPerson, lightingAlpha;
+	private int spriteViewProjection, lightingFirstPerson, lightingAlpha, skyForward, skyTime;
 
 	private final ReferenceQueue<MinicraftImage> textureDeletionQueue = new ReferenceQueue<>();
 	private final HashSet<TextureReference> textureReferences = new HashSet<>();
@@ -214,6 +214,12 @@ public class Context extends AWTGLCanvas {
 		glUniform1i(lightingShader.getUniform("position"), 2);
 		lightingFirstPerson = lightingShader.getUniform("isFirstPerson");
 		lightingAlpha = lightingShader.getUniform("alpha");
+		skyShader = new Shader("sky");
+		skyShader.use();
+		glUniform2f(skyShader.getUniform("resolution"), width, height);
+		glUniform1f(skyShader.getUniform("tanHalfFov"), (float) Math.tan(FOV / 2));
+		skyForward = skyShader.getUniform("forward");
+		skyTime = skyShader.getUniform("time");
 		glUseProgram(0);
 
 		orderedBatch = new Batch(spriteShader);
@@ -401,6 +407,24 @@ public class Context extends AWTGLCanvas {
 		spriteShader.use();
 	}
 
+	void drawSky(float time) {
+		flush();
+		skyShader.use();
+		glUniform2f(skyForward, forwardX, forwardY);
+		glUniform1f(skyTime, time);
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LEQUAL);
+		glDepthMask(false);
+		glDrawBuffers(GL_COLOR_ATTACHMENT0);
+		glBindVertexArray(emptyVao);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
+		glBindVertexArray(0);
+		glDrawBuffers(new int[] {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1});
+		glDepthMask(true);
+		glDisable(GL_DEPTH_TEST);
+		spriteShader.use();
+	}
+
 	private void mesh(MinicraftImage texture, float x0, float y0, float x1, float y1,
 		              float u0, float v0, float u1, float v1, int tint, boolean tinted, int color, int mode) {
 		if (!firstPerson) {
@@ -468,22 +492,18 @@ public class Context extends AWTGLCanvas {
 				x1, base, north,
 				x0, base, north,
 				u0, v0, u1, v1, tint, tinted, color, mode);
-			if (x0 == west) {
-				depthBatch.push(texture,
-					west, top, y0,
-					west, base, y1,
-					west, 0, y1,
-					west, 0, y0,
-					u0, v0, u1, v1, tint, tinted, color, mode);
-			}
-			if (x1 == east) {
-				depthBatch.push(texture,
-					east, top, y0,
-					east, base, y1,
-					east, 0, y1,
-					east, 0, y0,
-					u0, v0, u1, v1, tint, tinted, color, mode);
-			}
+			depthBatch.push(texture,
+				west, top, y0,
+				west, base, y1,
+				west, 0, y1,
+				west, 0, y0,
+				u0, v0, u1, v1, tint, tinted, color, mode);
+			depthBatch.push(texture,
+				east, top, y0,
+				east, base, y1,
+				east, 0, y1,
+				east, 0, y0,
+				u0, v0, u1, v1, tint, tinted, color, mode);
 		} else if (spriteMode == SpriteMode.IMPOSTER) {
 			float diagonal = (float) Math.sqrt(0.5);
 			float left = (x0 - positionX) * diagonal;

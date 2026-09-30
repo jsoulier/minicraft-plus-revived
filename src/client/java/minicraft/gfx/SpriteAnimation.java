@@ -213,8 +213,7 @@ public class SpriteAnimation implements Destroyable {
 	public void render(Screen screen, Level level, int x, int y, Context.SpriteMode spriteMode, int groundOffset) {
 		// TODO: To get an alright looking wall sprite, I'm using the "all surrounded" wall. It looks okay but not great
 		// TODO(v2): I'm now using the wall sprites for the stairs, which is also just okay
-		boolean isSolid = spriteMode == Context.SpriteMode.WALL || spriteMode == Context.SpriteMode.RAMP;
-		boolean isSurrounded = isSolid && screen.isFirstPerson();
+		boolean isSurrounded = spriteMode == Context.SpriteMode.WALL && screen.isFirstPerson();
 		int positionX = x << 4;
 		int positionY = y << 4;
 		if (spriteMode == Context.SpriteMode.IMPOSTER) {

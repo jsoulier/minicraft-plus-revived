@@ -1,6 +1,7 @@
 package minicraft.level.tile;
 
 import minicraft.core.Game;
+import minicraft.core.Renderer;
 import minicraft.core.io.Sound;
 import minicraft.entity.Direction;
 import minicraft.entity.Entity;
@@ -44,15 +45,16 @@ public class StairsTile extends Tile {
 		if (!leadsUp) {
 			rise = -16;
 		}
-		Tile wallTile;
+		String wallTexture;
 		if (level.depth == -4) {
-			wallTile = Tiles.get("obsidian wall");
+			wallTexture = "obsidian_wall";
 		} else if (level.depth == 1) {
-			wallTile = Tiles.get("cloud");
+			wallTexture = "cloud";
 		} else {
-			wallTile = Tiles.get("rock");
+			wallTexture = "rock";
 		}
-		wallTile.sprite.render(screen, level, x, y, Context.SpriteMode.RAMP, rise);
+		screen.setSpriteMode(Context.SpriteMode.RAMP, x << 4, y << 4, rise);
+		screen.render(x << 4, y << 4, Renderer.spriteLinker.getSheet(SpriteType.Tile, wallTexture));
 	}
 
 	public boolean mayPass(Level level, int x, int y, Entity e) {
