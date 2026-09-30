@@ -31,6 +31,7 @@ public class Context extends AWTGLCanvas {
 		IMPOSTER,
 		WALL,
 		BILLBOARD,
+		RAMP,
 	}
 
 	private static class Batch {
@@ -317,14 +318,14 @@ public class Context extends AWTGLCanvas {
 		if (fullBright || inColor != 0) {
 			mode = MODE_MASK;
 		}
-		quad(sheet, x, y, x + w, y + h, u0, v0, u1, v1, tint, tinted, color, mode);
+		mesh(sheet, x, y, x + w, y + h, u0, v0, u1, v1, tint, tinted, color, mode);
 	}
 
 	void fillRect(int x, int y, int w, int h, int color) {
 		if (w <= 0 || h <= 0) {
 			return;
 		}
-		quad(null, x, y, x + w, y + h, 0, 0, 0, 0, 0, false, color, MODE_SOLID);
+		mesh(null, x, y, x + w, y + h, 0, 0, 0, 0, 0, false, color, MODE_SOLID);
 	}
 
 	void drawRect(int x, int y, int w, int h, int color) {
@@ -400,7 +401,7 @@ public class Context extends AWTGLCanvas {
 		spriteShader.use();
 	}
 
-	private void quad(MinicraftImage texture, float x0, float y0, float x1, float y1,
+	private void mesh(MinicraftImage texture, float x0, float y0, float x1, float y1,
 		              float u0, float v0, float u1, float v1, int tint, boolean tinted, int color, int mode) {
 		if (!firstPerson) {
 			orderedBatch.push(texture,
@@ -449,6 +450,40 @@ public class Context extends AWTGLCanvas {
 				east, base, south - right,
 				east, base, south - left,
 				u0, v0, u1, v1, tint, tinted, color, mode);
+		} else if (spriteMode == SpriteMode.RAMP) {
+			float top = (positionY + TILE_SIZE - y0) * groundOffset / TILE_SIZE;
+			float base = (positionY + TILE_SIZE - y1) * groundOffset / TILE_SIZE;
+			float north = positionY;
+			float west = positionX;
+			float east = positionX + TILE_SIZE;
+			depthBatch.push(texture,
+				x0, top, y0,
+				x1, top, y0,
+				x1, base, y1,
+				x0, base, y1,
+				u0, v0, u1, v1, tint, tinted, color, mode);
+			depthBatch.push(texture,
+				x0, top, north,
+				x1, top, north,
+				x1, base, north,
+				x0, base, north,
+				u0, v0, u1, v1, tint, tinted, color, mode);
+			if (x0 == west) {
+				depthBatch.push(texture,
+					west, top, y0,
+					west, base, y1,
+					west, 0, y1,
+					west, 0, y0,
+					u0, v0, u1, v1, tint, tinted, color, mode);
+			}
+			if (x1 == east) {
+				depthBatch.push(texture,
+					east, top, y0,
+					east, base, y1,
+					east, 0, y1,
+					east, 0, y0,
+					u0, v0, u1, v1, tint, tinted, color, mode);
+			}
 		} else if (spriteMode == SpriteMode.IMPOSTER) {
 			float diagonal = (float) Math.sqrt(0.5);
 			float left = (x0 - positionX) * diagonal;
