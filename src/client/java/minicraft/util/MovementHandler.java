@@ -40,15 +40,15 @@ public class MovementHandler {
 			rotation += ROTATION_SPEED;
 		}
 		rotation += input.rightStickX() * STICK_ROTATION_SPEED;
-		double facingX = Math.cos(rotation);
-		double facingY = Math.sin(rotation);
-		int directionX = (int) Math.round(facingX * 100);
-		int directionY = (int) Math.round(facingY * 100);
+		double forwardX = Math.cos(rotation);
+		double forwardY = Math.sin(rotation);
+		int directionX = (int) Math.round(forwardX * 100);
+		int directionY = (int) Math.round(forwardY * 100);
 		direction = Direction.getDirection(directionX, directionY);
 		double forward = -vec.y;
 		double right = vec.x;
-		vec.x = facingX * forward - facingY * right;
-		vec.y = facingY * forward + facingX * right;
+		vec.x = forwardX * forward - forwardY * right;
+		vec.y = forwardY * forward + forwardX * right;
 		return vec;
 	}
 

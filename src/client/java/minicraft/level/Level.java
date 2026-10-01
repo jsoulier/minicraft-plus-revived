@@ -671,9 +671,6 @@ public class Level {
 			e.render(screen);
 			return;
 		}
-		if (e == Game.player) {
-			return;
-		}
 		// We need to temporarily change the mob's direction to be oriented relative to the player
 		Direction realDir = null;
 		if (e instanceof Mob && ((Mob) e).hasDirectionalSprites()) {
