@@ -65,8 +65,7 @@ public class Level {
 	}
 
 	private static final int MOB_SPAWN_FACTOR = 100; // The chance of a mob actually trying to spawn when trySpawn is called equals: mobCount / maxMobCount * MOB_SPAWN_FACTOR. so, it basically equals the chance, 1/number, of a mob spawning when the mob cap is reached. I hope that makes sense...
-	private static final int RENDER_DISTANCE = 20;
-	private static final int ENTITY_RENDER_DISTANCE = 40;
+	private static final int RENDER_DISTANCE = 25;
 
 	public int w, h; // Width and height of the level
 	private final long seed; // The used seed that was used to generate the world
@@ -615,9 +614,9 @@ public class Level {
 		int w = (Screen.w + 15) >> 4;
 		int h = (Screen.h + 15) >> 4;
 		if (screen.isFirstPerson()) {
-			xo = (Game.player.x >> 4) - ENTITY_RENDER_DISTANCE;
-			yo = (Game.player.y >> 4) - ENTITY_RENDER_DISTANCE;
-			w = h = ENTITY_RENDER_DISTANCE * 2;
+			xo = (Game.player.x >> 4) - RENDER_DISTANCE;
+			yo = (Game.player.y >> 4) - RENDER_DISTANCE;
+			w = h = RENDER_DISTANCE * 2;
 		}
 
 		screen.setOffset(xScroll, yScroll);
@@ -631,6 +630,11 @@ public class Level {
 		int yo = yScroll >> 4;
 		int w = (Screen.w + 15) >> 4;
 		int h = (Screen.h + 15) >> 4;
+		if (screen.isFirstPerson()) {
+			xo = (Game.player.x >> 4) - RENDER_DISTANCE;
+			yo = (Game.player.y >> 4) - RENDER_DISTANCE;
+			w = h = RENDER_DISTANCE * 2;
+		}
 
 		screen.setOffset(xScroll, yScroll);
 
@@ -645,8 +649,6 @@ public class Level {
 
 		for (int y = yo - r; y <= h + yo + r; y++) {
 			for (int x = xo - r; x <= w + xo + r; x++) {
-				if (x < 0 || y < 0 || x >= this.w || y >= this.h) continue;
-
 				int lr = getTile(x, y).getLightRadius(this, x, y);
 				if (lr > 0) screen.renderLight((x << 4) + 8, (y << 4) + 8, lr * brightness);
 			}

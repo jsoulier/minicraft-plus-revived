@@ -231,7 +231,7 @@ public class Renderer extends Game {
 		}
 		if (useCamera) {
 			if (currentLevel == 3) {
-				screen.renderSky();
+				screen.renderSky(player.x, player.y);
 			}
 			screen.resetCamera();
 		}

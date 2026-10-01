@@ -27,6 +27,11 @@ class Texture {
 		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, pixels);
 	}
 
+	void upload(float[] values, int count) {
+		bind();
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, count, 1, GL_RGB, GL_FLOAT, values);
+	}
+
 	void delete() {
 		glDeleteTextures(id);
 	}

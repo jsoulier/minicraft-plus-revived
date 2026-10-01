@@ -8,18 +8,11 @@ import org.intellij.lang.annotations.MagicConstant;
 import org.jetbrains.annotations.NotNull;
 
 import java.awt.AlphaComposite;
-import java.awt.Graphics2D;
-import java.awt.RadialGradientPaint;
 import java.awt.image.BufferedImage;
-import java.awt.image.DataBufferByte;
 import java.awt.image.DataBufferInt;
-import java.math.BigDecimal;
-import java.math.MathContext;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.IntStream;
 
 public class Screen {
 
@@ -236,15 +229,19 @@ public class Screen {
 	}
 
 	private static class SkyRendering implements Rendering {
-		private final float time;
+		private final float time, windTime;
+		private final int cameraX, cameraY;
 
-		public SkyRendering(float time) {
+		public SkyRendering(float time, float windTime, int cameraX, int cameraY) {
 			this.time = time;
+			this.windTime = windTime;
+			this.cameraX = cameraX;
+			this.cameraY = cameraY;
 		}
 
 		@Override
 		public void render(Context context) {
-			context.drawSky(time);
+			context.drawSky(time, windTime, cameraX, cameraY);
 		}
 	}
 
@@ -275,19 +272,20 @@ public class Screen {
 	private class OverlayRendering implements Rendering {
 		private final int currentLevel, xa, ya;
 		private final double darkFactor;
+		private final float[] lights;
 
 		private OverlayRendering(int currentLevel, int xa, int ya, double darkFactor) {
 			this.currentLevel = currentLevel;
 			this.xa = xa;
 			this.ya = ya;
 			this.darkFactor = darkFactor;
+			lights = lightOverlay.getLights();
 		}
 
 		@Override
 		public void render(Context context) {
 			double alpha = lightOverlay.getOverlayOpacity(currentLevel, darkFactor);
-			lightOverlay.render(xa, ya);
-			context.overlay(lightOverlay.olPixels, (float) alpha);
+			context.overlay(lights, (float) alpha, xa, ya);
 		}
 	}
 
@@ -461,9 +459,10 @@ public class Screen {
 		queue(new SetCameraRendering(x - xOffset, y - yOffset, dirX, dirY, eyeHeight));
 	}
 
-	public void renderSky() {
+	public void renderSky(int cameraX, int cameraY) {
 		float time = (float) Updater.tickCount / Updater.dayLength;
-		queue(new SkyRendering(time));
+		float windTime = (Updater.gameTime % 216000) / 60f;
+		queue(new SkyRendering(time, windTime, cameraX, cameraY));
 	}
 
 	public void resetCamera() {
@@ -569,36 +568,7 @@ public class Screen {
 	}
 
 	private static class LightOverlay {
-		private static final int[] dither = new int[] {
-			0, 8, 2, 10,
-			12, 4, 14, 6,
-			3, 11, 1, 9,
-			15, 7, 13, 5
-		};
-
-		public final float[] graFractions;
-		public final java.awt.Color[] graColors;
-		public final BufferedImage buffer = new BufferedImage(w, h, BufferedImage.TYPE_BYTE_GRAY);
-		public final byte[] bufPixels;
-		public final BufferedImage overlay = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
-		public final int[] olPixels;
 		public final HashMap<@NotNull Point, @NotNull Integer> lights = new HashMap<>();
-
-		public LightOverlay() {
-			bufPixels = ((DataBufferByte) buffer.getRaster().getDataBuffer()).getData();
-			olPixels = ((DataBufferInt) overlay.getRaster().getDataBuffer()).getData();
-			ArrayList<Float> graFractions = new ArrayList<>();
-			ArrayList<java.awt.Color> graColors = new ArrayList<>();
-			BigDecimal oneFiftieth = BigDecimal.ONE.divide(BigDecimal.valueOf(50), MathContext.UNLIMITED);
-			BigDecimal twoFiveFive = BigDecimal.valueOf(255);
-			for (BigDecimal i = BigDecimal.ZERO; i.compareTo(BigDecimal.ONE) <= 0; i = i.add(oneFiftieth)) {
-				graFractions.add(i.floatValue());
-				graColors.add(new java.awt.Color(255, 255, 255, 255 - i.pow(4).multiply(twoFiveFive).intValue()));
-			}
-			this.graFractions = new float[graFractions.size()];
-			for (int i = 0; i < graFractions.size(); ++i) this.graFractions[i] = graFractions.get(i);
-			this.graColors = graColors.toArray(new java.awt.Color[0]);
-		}
 
 		/**
 		 * Gets the overlay light darkness opacity instantly.
@@ -621,51 +591,16 @@ public class Screen {
 			lights.put(new Point(x, y), r);
 		}
 
-		public BufferedImage render(int xa, int ya) {
-			Graphics2D g2d = buffer.createGraphics();
-			g2d.setBackground(java.awt.Color.BLACK);
-			g2d.clearRect(0, 0, w, h);
-			for (Map.Entry<Point, Integer> e : lights.entrySet()) {
-				int x = e.getKey().x, y = e.getKey().y, r = e.getValue();
-				boolean[] surrounds = new boolean[8];
-				for (int xx = -16; xx < 17; ++xx) {
-					for (int yy = -16; yy < 17; ++yy) {
-						if (xx != 0 || yy != 0) {
-							Point pp = new Point(x + xx, y + yy);
-							if (lights.containsKey(pp) && r <= lights.get(pp)) {
-								double theta = Math.atan2(yy, xx);
-								if (theta < 0) theta += 2 * Math.PI; // Ensures it is positive.
-								surrounds[(int) (theta * 4 / Math.PI)] = true;
-							}
-						}
-					}
-				}
-
-				// Reduce lighting circles on screen
-				if (IntStream.range(0, surrounds.length).allMatch(i -> surrounds[i])) {
-					g2d.setColor(java.awt.Color.WHITE);
-					g2d.fillRect(x - 8, y - 8, 16, 16);
-				} else {
-					g2d.setPaint(new RadialGradientPaint(x, y, r, graFractions, graColors));
-					g2d.fillOval(x - r, y - r, r * 2, r * 2);
-				}
+		public float[] getLights() {
+			float[] data = new float[lights.size() * 3];
+			int i = 0;
+			for (Map.Entry<Point, Integer> light : lights.entrySet()) {
+				data[i] = light.getKey().x;
+				data[i + 1] = light.getKey().y;
+				data[i + 2] = light.getValue();
+				i += 3;
 			}
-			g2d.dispose();
-
-			for (int x = 0; x < w; ++x) {
-				for (int y = 0; y < h; ++y) {
-					int i = x + y * w;
-					// Grade of lightness
-					int grade = bufPixels[i] & 0xFF;
-					// (a + b) & 3 acts like (a + b) % 4
-					if (grade / 10 <= dither[((x + xa) & 3) + ((y + ya) & 3) * 4]) {
-						olPixels[i] = (255 - grade) << 24;
-					} else {
-						olPixels[i] = 0;
-					}
-				}
-			}
-			return overlay;
+			return data;
 		}
 	}
 }

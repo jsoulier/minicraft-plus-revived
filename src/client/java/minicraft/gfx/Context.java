@@ -19,6 +19,7 @@ public class Context extends AWTGLCanvas {
 	private static final float WORLD_NEAR = 1;
 	private static final float WORLD_FAR = 16 * 60;
 	private static final float TILE_SIZE = 16;
+	private static final int MAX_LIGHTS = 4096;
 	private static final int BYTES_PER_VERTEX = 32;
 	private static final int VERTICES_PER_QUAD = 6;
 	private static final int MODE_TEXTURE = 0;
@@ -131,7 +132,9 @@ public class Context extends AWTGLCanvas {
 	private Texture colorTexture, positionTexture, offscreenTexture, lightTexture;
 	private Shader spriteShader, lightingShader, skyShader;
 	private int emptyVao;
-	private int spriteViewProjection, lightingFirstPerson, lightingAlpha, skyForward, skyTime;
+	private int spriteViewProjection;
+	private int lightingFirstPerson, lightingAlpha, lightingCount, lightingDitherOffset;
+	private int skyForward, skyTime, skyCameraPosition, skyWindTime;
 
 	private final ReferenceQueue<MinicraftImage> textureDeletionQueue = new ReferenceQueue<>();
 	private final HashSet<TextureReference> textureReferences = new HashSet<>();
@@ -202,7 +205,7 @@ public class Context extends AWTGLCanvas {
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, offscreenTexture.id, 0);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-		lightTexture = new Texture(width, height, GL_RGBA8);
+		lightTexture = new Texture(MAX_LIGHTS, 1, GL_RGBA32F);
 
 		spriteShader = new Shader("sprite");
 		lightingShader = new Shader("lighting");
@@ -210,16 +213,21 @@ public class Context extends AWTGLCanvas {
 		glUniform1i(spriteShader.getUniform("sheet"), 0);
 		spriteViewProjection = spriteShader.getUniform("viewProjection");
 		lightingShader.use();
-		glUniform1i(lightingShader.getUniform("light"), 1);
+		glUniform1i(lightingShader.getUniform("lights"), 1);
+		glUniform1i(lightingShader.getUniform("screenHeight"), height);
 		glUniform1i(lightingShader.getUniform("position"), 2);
 		lightingFirstPerson = lightingShader.getUniform("isFirstPerson");
 		lightingAlpha = lightingShader.getUniform("alpha");
+		lightingCount = lightingShader.getUniform("lightCount");
+		lightingDitherOffset = lightingShader.getUniform("ditherOffset");
 		skyShader = new Shader("sky");
 		skyShader.use();
 		glUniform2f(skyShader.getUniform("resolution"), width, height);
 		glUniform1f(skyShader.getUniform("tanHalfFov"), (float) Math.tan(FOV / 2));
 		skyForward = skyShader.getUniform("forward");
 		skyTime = skyShader.getUniform("time");
+		skyCameraPosition = skyShader.getUniform("cameraPosition");
+		skyWindTime = skyShader.getUniform("windTime");
 		glUseProgram(0);
 
 		orderedBatch = new Batch(spriteShader);
@@ -379,13 +387,19 @@ public class Context extends AWTGLCanvas {
 		glDisable(GL_BLEND);
 	}
 
-	void overlay(int[] pixels, float alpha) {
+	void overlay(float[] lights, float alpha, int ditherX, int ditherY) {
 		flush();
+		int count = Math.min(lights.length / 3, MAX_LIGHTS);
 		glActiveTexture(GL_TEXTURE1);
-		lightTexture.upload(pixels);
+		lightTexture.bind();
+		if (count > 0) {
+			lightTexture.upload(lights, count);
+		}
 		glActiveTexture(GL_TEXTURE0);
 		lightingShader.use();
 		glUniform1f(lightingAlpha, alpha);
+		glUniform1i(lightingCount, count);
+		glUniform2i(lightingDitherOffset, ditherX, ditherY);
 		if (firstPerson) {
 			glUniform1i(lightingFirstPerson, 1);
 			glActiveTexture(GL_TEXTURE2);
@@ -407,11 +421,13 @@ public class Context extends AWTGLCanvas {
 		spriteShader.use();
 	}
 
-	void drawSky(float time) {
+	void drawSky(float time, float windTime, int cameraX, int cameraY) {
 		flush();
 		skyShader.use();
 		glUniform2f(skyForward, forwardX, forwardY);
 		glUniform1f(skyTime, time);
+		glUniform1f(skyWindTime, windTime);
+		glUniform2f(skyCameraPosition, cameraX, cameraY);
 		glEnable(GL_DEPTH_TEST);
 		glDepthFunc(GL_LEQUAL);
 		glDepthMask(false);
