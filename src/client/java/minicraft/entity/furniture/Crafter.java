@@ -71,7 +71,8 @@ public class Crafter extends Furniture {
 			return 8;
 		} else if (type == Type.Loom) {
 			return 6;
+		} else {
+			return 7;
 		}
-		return 7;
 	}
 }

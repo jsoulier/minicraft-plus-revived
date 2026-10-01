@@ -846,7 +846,6 @@ public class Player extends Mob implements ItemHolder, ClientTickable {
 		int centerY = y + (int) Math.round(forwardY * distance);
 		int extentX = (int) Math.round(Math.abs(forwardX) * halfLength + Math.abs(rightX) * halfWidth);
 		int extentY = (int) Math.round(Math.abs(forwardY) * halfLength + Math.abs(rightY) * halfWidth);
-
 		return new Rectangle(centerX - extentX, centerY - extentY, centerX + extentX, centerY + extentY, Rectangle.CORNERS);
 	}
 
